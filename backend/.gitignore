@@ -5,3 +5,4 @@ dist/
 .DS_Store
 logs/*.log
 !logs/.gitkeep
+data/participants.json

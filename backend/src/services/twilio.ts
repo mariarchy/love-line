@@ -38,7 +38,7 @@ export class TwilioService {
     const baseUrl = webhookBaseUrl || this.webhookBaseUrl;
     
     twiml.say(
-      { voice: 'alice' },
+      { voice: 'Google.en-US-Neural2-F' },
       `Hi ${participant.name}, welcome to your Valentine's Day match call. We're connecting you with your match now. Please wait while they join.`
     );
 
@@ -62,7 +62,7 @@ export class TwilioService {
   unknownNumber(): string {
     const twiml = new VoiceResponse();
     twiml.say(
-      { voice: 'alice' },
+      { voice: 'Google.en-US-Neural2-F' },
       'Sorry, we don\'t recognize this phone number. Please check that you\'re calling from the number you registered with. Goodbye.'
     );
     twiml.hangup();
@@ -75,7 +75,7 @@ export class TwilioService {
   duplicateCall(): string {
     const twiml = new VoiceResponse();
     twiml.say(
-      { voice: 'alice' },
+      { voice: 'Google.en-US-Neural2-F' },
       'You\'re already in an active call. Please hang up your other line first. Goodbye.'
     );
     twiml.hangup();
@@ -97,7 +97,7 @@ export class TwilioService {
   timeout(): string {
     const twiml = new VoiceResponse();
     twiml.say(
-      { voice: 'alice' },
+      { voice: 'Google.en-US-Neural2-F' },
       'Sorry, your match hasn\'t arrived yet. Please try again later or contact the organizer. Goodbye.'
     );
     twiml.hangup();
@@ -110,7 +110,7 @@ export class TwilioService {
   matchExit(): string {
     const twiml = new VoiceResponse();
     twiml.say(
-      { voice: 'alice' },
+      { voice: 'Google.en-US-Neural2-F' },
       'Your match has left the call. Thank you for participating! Goodbye.'
     );
     twiml.hangup();
@@ -123,7 +123,7 @@ export class TwilioService {
   error(): string {
     const twiml = new VoiceResponse();
     twiml.say(
-      { voice: 'alice' },
+      { voice: 'Google.en-US-Neural2-F' },
       'We\'re experiencing technical difficulties. Please try again later. Goodbye.'
     );
     twiml.hangup();

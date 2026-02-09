@@ -1,0 +1,34 @@
+[
+  {
+    "phoneNumber": "+14155551234",
+    "name": "Alice",
+    "match": {
+      "name": "Bob",
+      "phoneNumber": "+14155555678"
+    }
+  },
+  {
+    "phoneNumber": "+14155555678",
+    "name": "Bob",
+    "match": {
+      "name": "Alice",
+      "phoneNumber": "+14155551234"
+    }
+  },
+  {
+    "phoneNumber": "+442071234567",
+    "name": "Charlie",
+    "match": {
+      "name": "Diana",
+      "phoneNumber": "+442079876543"
+    }
+  },
+  {
+    "phoneNumber": "+442079876543",
+    "name": "Diana",
+    "match": {
+      "name": "Charlie",
+      "phoneNumber": "+442071234567"
+    }
+  }
+]

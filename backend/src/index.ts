@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Validate required environment variables
-const requiredEnvVars = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER'];
+const requiredEnvVars = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
@@ -63,7 +63,6 @@ const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || `http://localhost:${PORT}
 app.listen(PORT, () => {
   console.log(`♡ ✿ Love Line Backend ✿ ♡`);
   console.log(`Server running on port ${PORT}`);
-  console.log(`Twilio Phone Number: ${process.env.TWILIO_PHONE_NUMBER}`);
   console.log(`Webhook Base URL: ${webhookBaseUrl}`);
   console.log(`\nConfigure your Twilio phone number webhook to: ${webhookBaseUrl}/voice/incoming`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

@@ -23,7 +23,6 @@ export class TwilioService {
   constructor(
     accountSid: string,
     authToken: string,
-    private phoneNumber: string,
     private maxWaitTimeMinutes: number = 20,
     webhookBaseUrl: string,
   ) {
@@ -233,18 +232,16 @@ export function getTwilioService(): TwilioService {
   if (!twilioServiceInstance) {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
     const maxWaitTime = parseInt(process.env.MAX_WAIT_TIME_MINUTES || '20', 10);
-    const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || 'http://localhost:3000';;
+    const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || 'http://localhost:3000';
 
-    if (!accountSid || !authToken || !phoneNumber) {
+    if (!accountSid || !authToken) {
       throw new Error('Missing required Twilio environment variables');
     }
 
     twilioServiceInstance = new TwilioService(
       accountSid,
       authToken,
-      phoneNumber,
       maxWaitTime,
       webhookBaseUrl
     );

@@ -2,8 +2,6 @@ import twilio from 'twilio';
 import { Participant } from '../types';
 import { generateConferenceRoomId, normalizePhoneNumber } from '../utils/conference';
 import { conferenceRepository } from '../db/conference-repo';
-import { participantRepository } from '../db/participant-repo';
-import { matchRepository } from '../db/match-repo';
 import { callLogRepository } from '../db/call-log-repo';
 import dotenv from 'dotenv';
 
@@ -72,19 +70,6 @@ export class TwilioService {
   }
 
   /**
-   * Generate TwiML for duplicate call rejection
-   */
-  duplicateCall(): string {
-    const twiml = new VoiceResponse();
-    twiml.say(
-      { voice: 'Google.en-US-Neural2-F' },
-      'You\'re already in an active call. Please hang up your other line first. Goodbye.'
-    );
-    twiml.hangup();
-    return twiml.toString();
-  }
-
-  /**
    * Generate TwiML for wait music
    */
   waitMusic(): string {
@@ -143,23 +128,6 @@ export class TwilioService {
       console.error(`Failed to play error TwiML to call ${callSid}:`, err);
       throw err;
     }
-  }
-
-  /**
-   * Check if phone number is in an active conference
-   */
-  async isPhoneNumberInActiveConference(phoneNumber: string): Promise<boolean> {
-    const normalized = normalizePhoneNumber(phoneNumber);
-
-    // Cross-process check via DB
-    const participant = await participantRepository.findByPhone(normalized);
-    if (!participant) return false;
-
-    const match = await matchRepository.findByParticipantId(participant.id);
-    if (!match) return false;
-
-    const activeConference = await conferenceRepository.findActiveByMatchId(match.id);
-    return Boolean(activeConference);
   }
 
   /**

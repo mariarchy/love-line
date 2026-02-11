@@ -26,12 +26,6 @@ export class CallHandler {
     
     console.log(`Incoming call from ${callerPhone}`);
 
-    // Check for duplicate calls
-    if (await twilioService.isPhoneNumberInActiveConference(callerPhone)) {
-      return twilioService.duplicateCall();
-    }
-
-    // Look up participant
     const participant = await participantRepository.findByPhone(callerPhone);
     if (!participant) {
       return twilioService.unknownNumber();

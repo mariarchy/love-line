@@ -1,4 +1,4 @@
-import { Generated } from 'kysely';
+import { ColumnType, Generated } from 'kysely';
 
 export type CallStatus = 'started' | 'ended' | 'participant_joined' | 'participant_left' | 'error';
 export type ConferenceStatus = 'active' | 'ended';
@@ -13,7 +13,8 @@ export interface MatchesTable {
   id: Generated<number>;
   participantId: number;
   matchParticipantId: number;
-  scheduledAt: string | null; // ISO string
+  // Read returns Date | null; writes accept Date or ISO string
+  scheduledAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
 }
 
 export interface CallLogsTable {
@@ -23,8 +24,8 @@ export interface CallLogsTable {
   participantId: number;
   conferenceSid: string | null;
   callSid: string;
-  startedAt: string | null;
-  endedAt: string | null;
+  startedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
+  endedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
 }
 
 export interface ConferencesTable {
@@ -32,8 +33,8 @@ export interface ConferencesTable {
   matchId: number;
   conferenceSid: string;
   status: ConferenceStatus;
-  startedAt: string | null;
-  endedAt: string | null;
+  startedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
+  endedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
 }
 
 export interface DB {
@@ -42,4 +43,3 @@ export interface DB {
   call_logs: CallLogsTable;
   conferences: ConferencesTable;
 }
-

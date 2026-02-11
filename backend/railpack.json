@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "node",
+  "buildAptPackages": ["build-essential", "python3"],
+  "steps": {
+    "install": {
+      "commands": ["pnpm install"]
+    },
+    "build": {
+      "inputs": [{ "step": "install" }],
+      "commands": ["...", "pnpm run build"]
+    }
+  },
+  "deploy": {
+    "startCommand": "pnpm db:seed:prod && pnpm start"
+  }
+}

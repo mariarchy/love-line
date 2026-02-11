@@ -20,9 +20,9 @@ export interface CallLogsTable {
   id: Generated<number>;
   matchId: number;
   status: CallStatus;
-  participantId: number | null;
+  participantId: number;
   conferenceSid: string | null;
-  callSid: string | null;
+  callSid: string;
   startedAt: string | null;
   endedAt: string | null;
 }

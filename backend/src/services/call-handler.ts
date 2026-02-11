@@ -1,9 +1,10 @@
 import { TwilioIncomingCall, ConferenceStatusEvent } from '../types';
-import { participantRepository } from './participant-repo';
-import { matchRepository } from './match-repo';
-import { callLogRepository } from './call-log-repo';
+import { participantRepository } from '../db/participant-repo';
+import { matchRepository } from '../db/match-repo';
+import { callLogRepository } from '../db/call-log-repo';
 import { getTwilioService } from './twilio';
 import { normalizePhoneNumber } from '../utils/conference';
+import { generateConferenceRoomId } from '../utils/conference';
 
 /**
  * Handles call processing business logic
@@ -24,48 +25,50 @@ export class CallHandler {
     console.log(`Incoming call from ${callerPhone}`);
 
     // Check for duplicate calls
-    if (twilioService.isPhoneNumberInActiveConference(callerPhone)) {
+    if (await twilioService.isPhoneNumberInActiveConference(callerPhone)) {
       return twilioService.duplicateCall();
     }
 
     // Look up participant
-    const participant = participantRepository.findByPhone(callerPhone);
+    const participant = await participantRepository.findByPhone(callerPhone);
     if (!participant) {
       return twilioService.unknownNumber();
     }
 
-    // Track call for conference events
-    twilioService.trackConferenceJoin('pending', callerPhone, callData.CallSid);
-
     // Log call start
     const match = participant.matchParticipantId
-      ? matchRepository.findByParticipantId(participant.id)
+      ? await matchRepository.findByParticipantId(participant.id)
       : null;
     if (!match) {
       // Data inconsistency: participant has no match row
       return twilioService.error();
     }
-    const matchParticipant = participantRepository.findMatchForParticipant(participant.id);
+    const matchParticipant = await participantRepository.findByIdBang(match.matchParticipantId);
+    const callDetails = {
+      name: participant.name,
+      phoneNumber: participant.phone,
+      match: {
+        name: matchParticipant.name,
+        phoneNumber: matchParticipant.phone,
+      }
+    };
+    const conferenceRoomId = generateConferenceRoomId(callDetails);
 
-    callLogRepository.logEvent({
+    // Track call for conference events
+    await twilioService.trackConferenceJoin(conferenceRoomId, callData.CallSid, match.id);
+
+    await callLogRepository.logEvent({
       matchId: match.id,
       status: 'started',
       participantId: participant.id,
-      conferenceSid: null,
+      conferenceSid: conferenceRoomId,
       callSid: callData.CallSid,
       startedAt: new Date().toISOString(),
       endedAt: null
     });
 
     return twilioService.incomingCall(
-      {
-        name: participant.name,
-        phoneNumber: participant.phone,
-        match: {
-          name: matchParticipant?.name || '',
-          phoneNumber: matchParticipant?.phone || ''
-        }
-      },
+      callDetails,
       webhookBaseUrl
     );
   }
@@ -92,7 +95,7 @@ export class CallHandler {
         break;
       case 'conference-end':
         console.log(`Conference ended: ${conferenceSid}`);
-        twilioService.trackConferenceLeave(conferenceSid, '');
+        await twilioService.markConferenceEnded(conferenceSid);
         break;
     }
   }
@@ -102,21 +105,24 @@ export class CallHandler {
 
     const twilioService = getTwilioService();
 
-    const participantPhone = twilioService.getPhoneNumberFromCallSid(callSid);
+    const participantPhone = await twilioService.getPhoneNumberFromCallSid(callSid);
     if (!participantPhone) return;
-
-    twilioService.trackConferenceJoin(conferenceSid, participantPhone, callSid);
     
-    const participant = participantRepository.findByPhone(participantPhone);
-    const match = participant ? matchRepository.findByParticipantId(participant.id) : null;
+    const participant = await participantRepository.findByPhone(participantPhone);
+    // TODO: Error if participant not found
+    if (participant === null) {
+      twilioService.error();
+      return;
+    }
+    const match = await matchRepository.findByParticipantId(participant.id);
     if (!match) return;
 
-    callLogRepository.logEvent({
+    await callLogRepository.logEvent({
       matchId: match.id,
       status: 'participant_joined',
-      participantId: participant?.id || null,
+      participantId: participant.id,
       conferenceSid,
-      callSid: callSid || null,
+      callSid,
       startedAt: new Date().toISOString(),
       endedAt: null
     });
@@ -127,27 +133,32 @@ export class CallHandler {
 
     const twilioService = getTwilioService();
 
-    const participantPhone = twilioService.getPhoneNumberFromCallSid(callSid);
+    const participantPhone = await twilioService.getPhoneNumberFromCallSid(callSid);
     if (!participantPhone) return;
 
-    twilioService.trackConferenceLeave(conferenceSid, participantPhone);
+    await twilioService.trackConferenceLeave(conferenceSid);
     
-    const participant = participantRepository.findByPhone(participantPhone);
-    const match = participant ? matchRepository.findByParticipantId(participant.id) : null;
+    const participant = await participantRepository.findByPhone(participantPhone);
+    // TODO: Error if participant not found
+    if (participant === null) {
+      twilioService.error();
+      return;
+    }
+    const match = await matchRepository.findByParticipantId(participant.id);
     if (!match) return;
 
-    callLogRepository.logEvent({
+    await callLogRepository.logEvent({
       matchId: match.id,
       status: 'participant_left',
-      participantId: participant?.id || null,
+      participantId: participant.id,
       conferenceSid,
-      callSid: callSid || null,
+      callSid,
       startedAt: null,
       endedAt: new Date().toISOString()
     });
 
     // If one participant remains, notify them and end conference
-    const remainingCount = twilioService.getConferenceParticipantCount(conferenceSid);
+    const remainingCount = await twilioService.getConferenceParticipantCount(conferenceSid);
     if (remainingCount === 1) {
       await CallHandler.notifyRemainingParticipant(conferenceSid, participant);
     }
@@ -180,14 +191,14 @@ export class CallHandler {
       await twilioService.endConference(conferenceSid);
 
       // Log call end
-      const remainingPhone = twilioService.getPhoneNumberFromCallSid(remainingCallSid) ||
+      const remainingPhone = await twilioService.getPhoneNumberFromCallSid(remainingCallSid) ||
         normalizePhoneNumber(remainingParticipant.callSid || '');
       
-      const remainingParticipantData = participantRepository.findByPhone(remainingPhone);
+      const remainingParticipantData = await participantRepository.findByPhone(remainingPhone);
       if (remainingParticipantData && leavingParticipant) {
-        const match = matchRepository.findByParticipantId(remainingParticipantData.id);
+        const match = await matchRepository.findByParticipantId(remainingParticipantData.id);
         if (!match) return;
-        callLogRepository.logEvent({
+        await callLogRepository.logEvent({
           matchId: match.id,
           status: 'ended',
           participantId: remainingParticipantData.id,

@@ -22,6 +22,7 @@ export interface CallLogsTable {
   matchId: number;
   status: CallStatus;
   participantId: number;
+  conferenceId: string | null;
   conferenceSid: string | null;
   callSid: string;
   startedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
@@ -31,6 +32,7 @@ export interface CallLogsTable {
 export interface ConferencesTable {
   id: Generated<number>;
   matchId: number;
+  conferenceId: string;
   conferenceSid: string;
   status: ConferenceStatus;
   startedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;

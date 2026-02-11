@@ -25,10 +25,10 @@ export class TwilioService {
     authToken: string,
     private phoneNumber: string,
     private maxWaitTimeMinutes: number = 20,
-    webhookBaseUrl?: string
+    webhookBaseUrl: string,
   ) {
     this.client = twilio(accountSid, authToken);
-    this.webhookBaseUrl = webhookBaseUrl || process.env.WEBHOOK_BASE_URL || 'http://localhost:3000';
+    this.webhookBaseUrl = webhookBaseUrl;
   }
 
   /**
@@ -48,6 +48,7 @@ export class TwilioService {
     dial.conference({
       waitUrl: `${baseUrl}/voice/wait-music`,
       statusCallback: `${baseUrl}/voice/conference-status`,
+      statusCallbackMethod: 'POST',
       statusCallbackEvent: ['start', 'end', 'join', 'leave'],
       maxParticipants: 2,
       endConferenceOnExit: false,
@@ -152,9 +153,9 @@ export class TwilioService {
   /**
    * Track participant joining a conference
    */
-  async trackConferenceJoin(conferenceSid: string, callSid?: string, matchId?: number): Promise<void> {
+  async trackConferenceJoin(conferenceId: string, matchId?: number, conferenceSid: string | null = null): Promise<void> {
     if (matchId) {
-      await conferenceRepository.upsertActive(matchId, conferenceSid);
+      await conferenceRepository.upsertActive(matchId, conferenceId, conferenceSid);
     }
   }
 
@@ -234,7 +235,7 @@ export function getTwilioService(): TwilioService {
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
     const maxWaitTime = parseInt(process.env.MAX_WAIT_TIME_MINUTES || '20', 10);
-    const webhookBaseUrl = process.env.WEBHOOK_BASE_URL;
+    const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || 'http://localhost:3000';;
 
     if (!accountSid || !authToken || !phoneNumber) {
       throw new Error('Missing required Twilio environment variables');

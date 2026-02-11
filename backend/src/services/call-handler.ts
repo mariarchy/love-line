@@ -2,6 +2,7 @@ import { TwilioIncomingCall, ConferenceStatusEvent } from '../types';
 import { participantRepository } from '../db/participant-repo';
 import { matchRepository } from '../db/match-repo';
 import { callLogRepository } from '../db/call-log-repo';
+import { conferenceRepository } from '../db/conference-repo';
 import { getTwilioService } from './twilio';
 import { normalizePhoneNumber } from '../utils/conference';
 import { generateConferenceRoomId } from '../utils/conference';
@@ -16,11 +17,10 @@ export class CallHandler {
    */
   static async handleIncomingCall(
     callData: TwilioIncomingCall,
-    webhookBaseUrl: string
   ): Promise<string> {
     const twilioService = getTwilioService();
     
-    const callerPhone = normalizePhoneNumber(callData.From);
+    const callerPhone = normalizePhoneNumber(callData.from);
     
     console.log(`Incoming call from ${callerPhone}`);
 
@@ -52,25 +52,24 @@ export class CallHandler {
         phoneNumber: matchParticipant.phone,
       }
     };
+    // Bug: 
     const conferenceRoomId = generateConferenceRoomId(callDetails);
 
     // Track call for conference events
-    await twilioService.trackConferenceJoin(conferenceRoomId, callData.CallSid, match.id);
+    await twilioService.trackConferenceJoin(conferenceRoomId, match.id);
 
     await callLogRepository.logEvent({
       matchId: match.id,
       status: 'started',
       participantId: participant.id,
-      conferenceSid: conferenceRoomId,
-      callSid: callData.CallSid,
+      conferenceId: conferenceRoomId,
+      conferenceSid: null,
+      callSid: callData.callSid,
       startedAt: new Date().toISOString(),
       endedAt: null
     });
 
-    return twilioService.incomingCall(
-      callDetails,
-      webhookBaseUrl
-    );
+    return twilioService.incomingCall(callDetails);
   }
 
   /**
@@ -78,33 +77,21 @@ export class CallHandler {
    */
   static async handleConferenceStatus(event: ConferenceStatusEvent): Promise<void> {
     const twilioService = getTwilioService();
+    const { conferenceStatus: eventType, conferenceSid } = event;
     
-    // TODO: Conference status callbacks are not setup yet. Instead, 
-    // we're sent call status updates which look like this
-    /* {
-      event: {
-        ConferenceSid: undefined,
-        FriendlyName: undefined,
-        Status: undefined,
-        ConferenceStatusCallbackEvent: undefined,
-        ParticipantSid: undefined,
-        ParticipantStatus: undefined,
-        CallSid: 'CA5ecf061702bfbffe9494a06cfa4e980e',
-        CallStatus: 'completed'
-      }
+    if (event.conferenceSid && event.friendlyName) {
+      await conferenceRepository.setConferenceSid(event.friendlyName, event.conferenceSid);
     }
-    */
-    const { ConferenceStatusCallbackEvent: eventType, ConferenceSid: conferenceSid, CallSid: callSid } = event;
-    
+
     console.log(`Conference event: ${eventType} for ${conferenceSid}`);
 
     switch (eventType) {
       case 'participant-join':
-        await CallHandler.handleParticipantJoin(conferenceSid, callSid);
+        await CallHandler.handleParticipantJoin(event);
         break;
       case 'participant-leave':
       case 'completed':
-        await CallHandler.handleParticipantLeave(conferenceSid, callSid);
+        await CallHandler.handleParticipantLeave(event);
         break;
       case 'conference-start':
         console.log(`Conference started: ${conferenceSid}`);
@@ -116,7 +103,8 @@ export class CallHandler {
     }
   }
 
-  private static async handleParticipantJoin(conferenceSid: string, callSid?: string): Promise<void> {
+  private static async handleParticipantJoin(event: ConferenceStatusEvent): Promise<void> {
+    const { conferenceSid, friendlyName: conferenceId, callSid } = event;
     if (!callSid) return;
 
     const twilioService = getTwilioService();
@@ -133,10 +121,14 @@ export class CallHandler {
     const match = await matchRepository.findByParticipantId(participant.id);
     if (!match) return;
 
+    const conferenceRecord = await conferenceRepository.findByConferenceSid(conferenceSid);
+    const resolvedConferenceId = conferenceRecord?.conferenceId || conferenceId || null;
+
     await callLogRepository.logEvent({
       matchId: match.id,
       status: 'participant_joined',
       participantId: participant.id,
+      conferenceId: resolvedConferenceId,
       conferenceSid,
       callSid,
       startedAt: new Date().toISOString(),
@@ -144,7 +136,8 @@ export class CallHandler {
     });
   }
 
-  private static async handleParticipantLeave(conferenceSid: string, callSid?: string): Promise<void> {
+  private static async handleParticipantLeave(event: ConferenceStatusEvent): Promise<void> {
+    const { conferenceSid, friendlyName: conferenceId, callSid } = event;
     if (!callSid) return;
 
     const twilioService = getTwilioService();
@@ -163,10 +156,14 @@ export class CallHandler {
     const match = await matchRepository.findByParticipantId(participant.id);
     if (!match) return;
 
+    const conferenceRecord = await conferenceRepository.findByConferenceSid(conferenceSid);
+    const resolvedConferenceId = conferenceRecord?.conferenceId || conferenceId || null;
+
     await callLogRepository.logEvent({
       matchId: match.id,
       status: 'participant_left',
       participantId: participant.id,
+      conferenceId: resolvedConferenceId,
       conferenceSid,
       callSid,
       startedAt: null,
@@ -185,6 +182,8 @@ export class CallHandler {
     leavingParticipant: { name: string } | null
   ): Promise<void> {
     const twilioService = getTwilioService();
+    const conferenceRecord = await conferenceRepository.findByConferenceSid(conferenceSid);
+    const conferenceId = conferenceRecord?.conferenceId || null;
 
     try {
       const twilioClient = twilioService.getClient();
@@ -218,6 +217,7 @@ export class CallHandler {
           matchId: match.id,
           status: 'ended',
           participantId: remainingParticipantData.id,
+          conferenceId,
           conferenceSid,
           callSid: remainingCallSid,
           startedAt: null,

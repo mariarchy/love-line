@@ -17,16 +17,12 @@ router.post('/incoming', async (req: Request, res: Response) => {
 
   try {
     const callData: TwilioIncomingCall = {
-      From: req.body.From,
-      To: req.body.To,
-      CallSid: req.body.CallSid
+      from: req.body.From,
+      to: req.body.To,
+      callSid: req.body.CallSid
     };
 
-    // Get webhook base URL from environment or request
-    const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || 
-      `${req.protocol}://${req.get('host')}`;
-
-    const twiml = await CallHandler.handleIncomingCall(callData, webhookBaseUrl);
+    const twiml = await CallHandler.handleIncomingCall(callData);
     res.type('text/xml').send(twiml);
   } catch (error) {
     console.error('Error handling incoming call:', error);
@@ -58,15 +54,16 @@ router.post('/conference-status', async (req: Request, res: Response) => {
 
   try {
     const event: ConferenceStatusEvent = {
-      ConferenceSid: req.body.ConferenceSid,
-      FriendlyName: req.body.FriendlyName,
-      Status: req.body.Status,
-      ConferenceStatusCallbackEvent: req.body.ConferenceStatusCallbackEvent,
-      ParticipantSid: req.body.ParticipantSid,
-      ParticipantStatus: req.body.ParticipantStatus,
-      CallSid: req.body.CallSid,
-      CallStatus: req.body.CallStatus
+      conferenceSid: req.body.ConferenceSid,
+      friendlyName: req.body.FriendlyName,
+      status: req.body.Status,
+      conferenceStatus: req.body.StatusCallbackEvent,
+      participantSid: req.body.ParticipantSid,
+      participantStatus: req.body.ParticipantStatus,
+      callSid: req.body.CallSid,
+      callStatus: req.body.ParticipantCallStatus
     };
+    console.log({ event: req.body });
 
     await CallHandler.handleConferenceStatus(event);
     res.status(200).send('OK');

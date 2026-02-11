@@ -29,6 +29,7 @@ sqlite.exec(`
     matchId INTEGER NOT NULL,
     status TEXT NOT NULL,
     participantId INTEGER,
+    conferenceId TEXT,
     conferenceSid TEXT,
     callSid TEXT,
     startedAt TEXT,
@@ -40,7 +41,8 @@ sqlite.exec(`
   CREATE TABLE IF NOT EXISTS conferences (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     matchId INTEGER NOT NULL UNIQUE,
-    conferenceSid TEXT NOT NULL UNIQUE,
+    conferenceId TEXT NOT NULL UNIQUE,
+    conferenceSid TEXT UNIQUE,
     status TEXT NOT NULL DEFAULT 'active',
     startedAt TEXT,
     endedAt TEXT,

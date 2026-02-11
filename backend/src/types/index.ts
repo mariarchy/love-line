@@ -25,18 +25,18 @@ export interface CallEvent {
 }
 
 export interface TwilioIncomingCall {
-  From: string;
-  To: string;
-  CallSid: string;
+  from: string;
+  to: string;
+  callSid: string;
 }
 
 export interface ConferenceStatusEvent {
-  ConferenceSid: string;
-  FriendlyName: string;
-  Status: string;
-  ConferenceStatusCallbackEvent: string;
-  ParticipantSid?: string;
-  ParticipantStatus?: string;
-  CallSid?: string;
-  CallStatus?: string;
+  conferenceSid: string;
+  friendlyName: string;
+  status: string;
+  conferenceStatus: string;
+  participantSid?: string;
+  participantStatus?: string;
+  callSid?: string;
+  callStatus?: string;
 }

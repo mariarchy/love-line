@@ -1,6 +1,7 @@
 import { TwilioIncomingCall, ConferenceStatusEvent } from '../types';
-import { getDatabase } from './database';
-import { Logger } from './logger';
+import { participantRepository } from './participant-repo';
+import { matchRepository } from './match-repo';
+import { callLogRepository } from './call-log-repo';
 import { getTwilioService } from './twilio';
 import { normalizePhoneNumber } from '../utils/conference';
 
@@ -17,8 +18,6 @@ export class CallHandler {
     webhookBaseUrl: string
   ): Promise<string> {
     const twilioService = getTwilioService();
-    const db = getDatabase();
-    const logger = new Logger();
     
     const callerPhone = normalizePhoneNumber(callData.From);
     
@@ -26,14 +25,12 @@ export class CallHandler {
 
     // Check for duplicate calls
     if (twilioService.isPhoneNumberInActiveConference(callerPhone)) {
-      logger.logError('error', callerPhone, 'Duplicate call attempt');
       return twilioService.duplicateCall();
     }
 
     // Look up participant
-    const participant = db.findParticipant(callerPhone);
+    const participant = participantRepository.findByPhone(callerPhone);
     if (!participant) {
-      logger.logError('unknown_number', callerPhone, 'Phone number not found');
       return twilioService.unknownNumber();
     }
 
@@ -41,14 +38,36 @@ export class CallHandler {
     twilioService.trackConferenceJoin('pending', callerPhone, callData.CallSid);
 
     // Log call start
-    logger.logCallStart(
-      callerPhone,
-      participant.name,
-      participant.match.name,
-      callData.CallSid
-    );
+    const match = participant.matchParticipantId
+      ? matchRepository.findByParticipantId(participant.id)
+      : null;
+    if (!match) {
+      // Data inconsistency: participant has no match row
+      return twilioService.error();
+    }
+    const matchParticipant = participantRepository.findMatchForParticipant(participant.id);
 
-    return twilioService.incomingCall(participant, webhookBaseUrl);
+    callLogRepository.logEvent({
+      matchId: match.id,
+      status: 'started',
+      participantId: participant.id,
+      conferenceSid: null,
+      callSid: callData.CallSid,
+      startedAt: new Date().toISOString(),
+      endedAt: null
+    });
+
+    return twilioService.incomingCall(
+      {
+        name: participant.name,
+        phoneNumber: participant.phone,
+        match: {
+          name: matchParticipant?.name || '',
+          phoneNumber: matchParticipant?.phone || ''
+        }
+      },
+      webhookBaseUrl
+    );
   }
 
   /**
@@ -82,42 +101,50 @@ export class CallHandler {
     if (!callSid) return;
 
     const twilioService = getTwilioService();
-    const db = getDatabase();
-    const logger = new Logger();
 
     const participantPhone = twilioService.getPhoneNumberFromCallSid(callSid);
     if (!participantPhone) return;
 
     twilioService.trackConferenceJoin(conferenceSid, participantPhone, callSid);
     
-    const participant = db.findParticipant(participantPhone);
-    logger.logParticipantEvent(
-      'participant_joined',
-      participantPhone,
+    const participant = participantRepository.findByPhone(participantPhone);
+    const match = participant ? matchRepository.findByParticipantId(participant.id) : null;
+    if (!match) return;
+
+    callLogRepository.logEvent({
+      matchId: match.id,
+      status: 'participant_joined',
+      participantId: participant?.id || null,
       conferenceSid,
-      participant?.name
-    );
+      callSid: callSid || null,
+      startedAt: new Date().toISOString(),
+      endedAt: null
+    });
   }
 
   private static async handleParticipantLeave(conferenceSid: string, callSid?: string): Promise<void> {
     if (!callSid) return;
 
     const twilioService = getTwilioService();
-    const db = getDatabase();
-    const logger = new Logger();
 
     const participantPhone = twilioService.getPhoneNumberFromCallSid(callSid);
     if (!participantPhone) return;
 
     twilioService.trackConferenceLeave(conferenceSid, participantPhone);
     
-    const participant = db.findParticipant(participantPhone);
-    logger.logParticipantEvent(
-      'participant_left',
-      participantPhone,
+    const participant = participantRepository.findByPhone(participantPhone);
+    const match = participant ? matchRepository.findByParticipantId(participant.id) : null;
+    if (!match) return;
+
+    callLogRepository.logEvent({
+      matchId: match.id,
+      status: 'participant_left',
+      participantId: participant?.id || null,
       conferenceSid,
-      participant?.name
-    );
+      callSid: callSid || null,
+      startedAt: null,
+      endedAt: new Date().toISOString()
+    });
 
     // If one participant remains, notify them and end conference
     const remainingCount = twilioService.getConferenceParticipantCount(conferenceSid);
@@ -131,8 +158,6 @@ export class CallHandler {
     leavingParticipant: { name: string } | null
   ): Promise<void> {
     const twilioService = getTwilioService();
-    const db = getDatabase();
-    const logger = new Logger();
 
     try {
       const twilioClient = twilioService.getClient();
@@ -158,15 +183,19 @@ export class CallHandler {
       const remainingPhone = twilioService.getPhoneNumberFromCallSid(remainingCallSid) ||
         normalizePhoneNumber(remainingParticipant.callSid || '');
       
-      const remainingParticipantData = db.findParticipant(remainingPhone);
+      const remainingParticipantData = participantRepository.findByPhone(remainingPhone);
       if (remainingParticipantData && leavingParticipant) {
-        logger.logCallEnd(
-          remainingPhone,
-          remainingParticipantData.name,
-          leavingParticipant.name,
+        const match = matchRepository.findByParticipantId(remainingParticipantData.id);
+        if (!match) return;
+        callLogRepository.logEvent({
+          matchId: match.id,
+          status: 'ended',
+          participantId: remainingParticipantData.id,
           conferenceSid,
-          0
-        );
+          callSid: remainingCallSid,
+          startedAt: null,
+          endedAt: new Date().toISOString()
+        });
       }
     } catch (error) {
       console.error('Error handling participant leave:', error);

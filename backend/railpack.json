@@ -4,6 +4,7 @@
   "buildAptPackages": ["build-essential", "python3"],
   "steps": {
     "install": {
+      "inputs": [{ "local": true, "include": ["."] }],
       "commands": ["pnpm install"]
     },
     "build": {

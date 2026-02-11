@@ -9,7 +9,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "type-check": "tsc --noEmit",
     "validate": "ts-node src/utils/validate-participants.ts",
-    "db:seed": "ts-node src/utils/seed-db.ts",
+    "db:seed": "ts-node src/db/seed.ts",
     "db:reset": "rm -f data/participants.db && npm run db:seed"
   },
   "keywords": ["twilio", "phone", "dating", "valentines"],
@@ -17,6 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^9.4.3",
+    "kysely": "^0.27.3",
     "express": "^4.18.2",
     "twilio": "^4.19.0",
     "dotenv": "^16.3.1"

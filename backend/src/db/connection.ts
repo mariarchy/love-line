@@ -39,15 +39,18 @@ async function runMigrations() {
       CREATE TABLE IF NOT EXISTS participants (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
-        phone TEXT NOT NULL UNIQUE
+        phone TEXT NOT NULL UNIQUE,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
       CREATE TABLE IF NOT EXISTS matches (
         id SERIAL PRIMARY KEY,
         "participantId" INTEGER NOT NULL UNIQUE REFERENCES participants(id) ON DELETE CASCADE,
         "matchParticipantId" INTEGER NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
-        "scheduledAt" TIMESTAMPTZ
+        "scheduledAt" TIMESTAMPTZ,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      CREATE INDEX IF NOT EXISTS idx_matches_match_participant_id ON matches("matchParticipantId");
 
       CREATE TABLE IF NOT EXISTS call_logs (
         id SERIAL PRIMARY KEY,
@@ -58,7 +61,8 @@ async function runMigrations() {
         "conferenceSid" TEXT,
         "callSid" TEXT NOT NULL,
         "startedAt" TIMESTAMPTZ,
-        "endedAt" TIMESTAMPTZ
+        "endedAt" TIMESTAMPTZ,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
       CREATE TABLE IF NOT EXISTS conferences (
@@ -68,8 +72,16 @@ async function runMigrations() {
         "conferenceSid" TEXT UNIQUE,
         status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'ended')),
         "startedAt" TIMESTAMPTZ,
-        "endedAt" TIMESTAMPTZ
+        "endedAt" TIMESTAMPTZ,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+    `);
+
+    await client.query(`
+      ALTER TABLE participants ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE call_logs ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE conferences ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();
     `);
   } finally {
     client.release();

@@ -7,6 +7,7 @@ export interface ParticipantsTable {
   id: Generated<number>;
   name: string;
   phone: string; // E.164
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface MatchesTable {
@@ -15,6 +16,7 @@ export interface MatchesTable {
   matchParticipantId: number;
   // Read returns Date | null; writes accept Date or ISO string
   scheduledAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface CallLogsTable {
@@ -27,6 +29,7 @@ export interface CallLogsTable {
   callSid: string;
   startedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
   endedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface ConferencesTable {
@@ -37,6 +40,7 @@ export interface ConferencesTable {
   status: ConferenceStatus;
   startedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
   endedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
+  createdAt: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
 export interface DB {

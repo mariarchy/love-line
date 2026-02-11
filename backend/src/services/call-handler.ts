@@ -7,6 +7,7 @@ import { getTwilioService } from './twilio';
 import { normalizePhoneNumber } from '../utils/conference';
 import { generateConferenceRoomId } from '../utils/conference';
 import { reportError } from './error-reporter';
+import { Logger } from './logger';
 
 /**
  * Handles call processing business logic
@@ -41,7 +42,15 @@ export class CallHandler {
       ? await matchRepository.findByParticipantId(participant.id)
       : null;
     if (!match) {
-      // Data inconsistency: participant has no match row
+      // Handle error
+      reportError(new Error('Match not found'), { phase: 'incoming', callSid: callData.callSid });
+      const logger = new Logger();
+      logger.logError(
+        'error',
+        callerPhone,
+        'Match not found',
+        { callSid: callData.callSid }
+      );
       return twilioService.error();
     }
     const matchParticipant = await participantRepository.findByIdBang(match.matchParticipantId);

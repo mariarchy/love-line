@@ -1,12 +1,13 @@
 import 'dotenv/config';
 
+import * as Sentry from '@sentry/node';
 const sentryDsn = process.env.SENTRY_DSN?.trim();
 if (sentryDsn) {
-  const Sentry = require('@sentry/node');
   Sentry.init({
     dsn: sentryDsn,
     environment: process.env.NODE_ENV,
     tracesSampleRate: 0.1,
+    integrations: [Sentry.expressIntegration()],
   });
 }
 
@@ -60,8 +61,11 @@ app.get('/', (req, res) => {
   });
 });
 
+if (sentryDsn) {
+  Sentry.setupExpressErrorHandler(app);
+}
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  reportError(err, { phase: 'unknown', callSid: req.body?.CallSid, conferenceSid: req.body?.ConferenceSid, error: err });
+  reportError(err, { phase: 'unknown', callSid: req.body?.CallSid, conferenceSid: req.body?.ConferenceSid });
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 

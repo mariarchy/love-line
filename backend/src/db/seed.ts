@@ -27,17 +27,22 @@ export async function seed() {
 
     for (const p of participants) {
       const phone = normalizePhoneNumber(p.phoneNumber);
+      const match = { name: p.match.name, phone: p.match.phoneNumber }
       const inserted = await trx
         .insertInto('participants')
-        .values({ name: p.name, phone })
-        .returning('id')
-        .executeTakeFirstOrThrow();
-      participantIdByPhone.set(phone, inserted.id);
+        .values([{ name: p.name, phone }, match])
+        .returningAll()
+        .execute()
+      
+      for (const r of inserted) {
+        participantIdByPhone.set(r.phone, r.id)
+      }
     }
 
     for (const p of participants) {
       const participantId = participantIdByPhone.get(normalizePhoneNumber(p.phoneNumber));
       const matchId = participantIdByPhone.get(normalizePhoneNumber(p.match.phoneNumber));
+      console.log({ participantId, matchId, participantIdByPhone })
       if (!participantId || !matchId) continue;
 
       await trx

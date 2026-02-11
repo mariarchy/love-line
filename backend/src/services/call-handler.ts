@@ -79,6 +79,21 @@ export class CallHandler {
   static async handleConferenceStatus(event: ConferenceStatusEvent): Promise<void> {
     const twilioService = getTwilioService();
     
+    // TODO: Conference status callbacks are not setup yet. Instead, 
+    // we're sent call status updates which look like this
+    /* {
+      event: {
+        ConferenceSid: undefined,
+        FriendlyName: undefined,
+        Status: undefined,
+        ConferenceStatusCallbackEvent: undefined,
+        ParticipantSid: undefined,
+        ParticipantStatus: undefined,
+        CallSid: 'CA5ecf061702bfbffe9494a06cfa4e980e',
+        CallStatus: 'completed'
+      }
+    }
+    */
     const { ConferenceStatusCallbackEvent: eventType, ConferenceSid: conferenceSid, CallSid: callSid } = event;
     
     console.log(`Conference event: ${eventType} for ${conferenceSid}`);
@@ -88,6 +103,7 @@ export class CallHandler {
         await CallHandler.handleParticipantJoin(conferenceSid, callSid);
         break;
       case 'participant-leave':
+      case 'completed':
         await CallHandler.handleParticipantLeave(conferenceSid, callSid);
         break;
       case 'conference-start':

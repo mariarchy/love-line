@@ -7,7 +7,7 @@ export type ParticipantRow = Selectable<ParticipantsTable>;
 
 export interface ParticipantWithMatch extends ParticipantRow {
   matchParticipantId: number | null;
-  scheduledAt: string | null;
+  scheduledAt: Date | null;
 }
 
 export class ParticipantRepository {
@@ -29,21 +29,18 @@ export class ParticipantRepository {
     return row ?? null;
   }
 
-  async findMatchForParticipant(participantId: number): Promise<ParticipantWithMatch | null> {
+  async findByIdBang(id: number) {
     const row = await db
-      .selectFrom('matches')
-      .innerJoin('participants', 'participants.id', 'matches.matchParticipantId')
+      .selectFrom('participants')
       .select([
         'participants.id as id',
         'participants.name as name',
-        'participants.phone as phone',
-        'matches.matchParticipantId as matchParticipantId',
-        'matches.scheduledAt as scheduledAt'
+        'participants.phone as phone'
       ])
-      .where('matches.participantId', '=', participantId)
-      .executeTakeFirst();
+      .where('id', '=', id)
+      .executeTakeFirstOrThrow();
 
-    return row ?? null;
+    return row;
   }
 }
 

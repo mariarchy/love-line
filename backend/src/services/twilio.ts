@@ -1,6 +1,10 @@
 import twilio from 'twilio';
 import { Participant } from '../types';
-import { generateConferenceRoomId } from '../utils/conference';
+import { generateConferenceRoomId, normalizePhoneNumber } from '../utils/conference';
+import { conferenceRepository } from '../db/conference-repo';
+import { participantRepository } from '../db/participant-repo';
+import { matchRepository } from '../db/match-repo';
+import { callLogRepository } from '../db/call-log-repo';
 import dotenv from 'dotenv';
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -14,8 +18,6 @@ dotenv.config();
  */
 export class TwilioService {
   private client: twilio.Twilio;
-  private activeConferences: Map<string, Set<string>> = new Map();
-  private callSidToPhoneNumber: Map<string, string> = new Map();
   private webhookBaseUrl: string;
 
   constructor(
@@ -133,53 +135,73 @@ export class TwilioService {
   /**
    * Check if phone number is in an active conference
    */
-  isPhoneNumberInActiveConference(phoneNumber: string): boolean {
-    for (const phoneNumbers of this.activeConferences.values()) {
-      if (phoneNumbers.has(phoneNumber)) {
-        return true;
-      }
-    }
-    return false;
+  async isPhoneNumberInActiveConference(phoneNumber: string): Promise<boolean> {
+    const normalized = normalizePhoneNumber(phoneNumber);
+
+    // Cross-process check via DB
+    const participant = await participantRepository.findByPhone(normalized);
+    if (!participant || !participant.matchParticipantId) return false;
+
+    const match = await matchRepository.findByParticipantId(participant.id);
+    if (!match) return false;
+
+    const activeConference = await conferenceRepository.findActiveByMatchId(match.id);
+    return Boolean(activeConference);
   }
 
   /**
    * Track participant joining a conference
    */
-  trackConferenceJoin(conferenceSid: string, phoneNumber: string, callSid?: string): void {
-    if (!this.activeConferences.has(conferenceSid)) {
-      this.activeConferences.set(conferenceSid, new Set());
-    }
-    this.activeConferences.get(conferenceSid)!.add(phoneNumber);
-    if (callSid) {
-      this.callSidToPhoneNumber.set(callSid, phoneNumber);
+  async trackConferenceJoin(conferenceSid: string, callSid?: string, matchId?: number): Promise<void> {
+    if (matchId) {
+      await conferenceRepository.upsertActive(matchId, conferenceSid);
     }
   }
 
   /**
    * Track participant leaving a conference
    */
-  trackConferenceLeave(conferenceSid: string, phoneNumber: string): void {
-    const participants = this.activeConferences.get(conferenceSid);
-    if (participants) {
-      participants.delete(phoneNumber);
-      if (participants.size === 0) {
-        this.activeConferences.delete(conferenceSid);
-      }
+  async trackConferenceLeave(conferenceSid: string): Promise<void> {
+    // If conference now empty, mark ended
+    const participants = await this.client
+      .conferences(conferenceSid)
+      .participants.list();
+    if (participants.length === 0) {
+      await conferenceRepository.markEnded(conferenceSid);
     }
+  }
+
+  /**
+   * Mark a conference ended without requiring participant context
+   */
+  async markConferenceEnded(conferenceSid: string): Promise<void> {
+    await conferenceRepository.markEnded(conferenceSid);
   }
 
   /**
    * Get phone number from call SID
    */
-  getPhoneNumberFromCallSid(callSid: string): string | null {
-    return this.callSidToPhoneNumber.get(callSid) || null;
+  async getPhoneNumberFromCallSid(callSid: string): Promise<string | null> {
+    const phoneFromLogs = await callLogRepository.findPhoneByCallSid(callSid);
+    if (phoneFromLogs) return phoneFromLogs;
+
+    // Fallback to Twilio lookup
+    try {
+      const call = await this.client.calls(callSid).fetch();
+      return normalizePhoneNumber(call.from);
+    } catch {
+      return null;
+    }
   }
 
   /**
    * Get number of participants in a conference
    */
-  getConferenceParticipantCount(conferenceSid: string): number {
-    return this.activeConferences.get(conferenceSid)?.size || 0;
+  async getConferenceParticipantCount(conferenceSid: string): Promise<number> {
+    const participants = await this.client
+      .conferences(conferenceSid)
+      .participants.list();
+    return participants.length;
   }
 
   /**
@@ -188,7 +210,7 @@ export class TwilioService {
   async endConference(conferenceSid: string): Promise<void> {
     try {
       await this.client.conferences(conferenceSid).update({ status: 'completed' });
-      this.activeConferences.delete(conferenceSid);
+      await conferenceRepository.markEnded(conferenceSid);
     } catch (error) {
       console.error(`Failed to end conference ${conferenceSid}:`, error);
       throw error;

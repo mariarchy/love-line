@@ -4,14 +4,15 @@
   "description": "Twilio-based phone matching service for Valentine's Day blind dates",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm rebuild better-sqlite3 && tsc",
     "start": "node dist/index.js",
     "dev": "sh -c \"ngrok http 3000 --log=stdout >/tmp/ngrok-dev.log 2>&1 & ts-node-dev --respawn --transpile-only src/index.ts\"",
     "type-check": "tsc --noEmit",
     "validate": "ts-node src/utils/validate-participants.ts",
     "db:seed": "ts-node src/db/seed.ts",
     "db:seed:prod": "node dist/db/seed.js",
-    "db:reset": "rm -f data/participants.db data/participants.db-wal data/participants.db-shm && npm run db:seed"
+    "db:reset": "rm -f data/participants.db data/participants.db-wal data/participants.db-shm && npm run db:seed",
+    "postinstall": "pnpm rebuild better-sqlite3"
   },
   "author": "",
   "license": "MIT",

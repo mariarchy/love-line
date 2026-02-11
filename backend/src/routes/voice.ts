@@ -4,6 +4,8 @@ import { CallHandler } from '../services/call-handler';
 import { getTwilioService } from '../services/twilio';
 import { normalizePhoneNumber } from '../utils/conference';
 import { Logger } from '../services/logger';
+import { reportError } from '../services/error-reporter';
+import { participantRepository } from '../db/participant-repo';
 
 const router: Router = express.Router();
 
@@ -25,12 +27,20 @@ router.post('/incoming', async (req: Request, res: Response) => {
     const twiml = await CallHandler.handleIncomingCall(callData);
     res.type('text/xml').send(twiml);
   } catch (error) {
-    console.error('Error handling incoming call:', error);
     const callerPhone = normalizePhoneNumber(req.body.From || 'unknown');
+    const callSid = req.body.CallSid;
+    const participant = await participantRepository.findByPhone(callerPhone).catch(() => null);
+    reportError(error, {
+      phase: 'incoming',
+      participantId: participant?.id,
+      participantPhone: callerPhone,
+      callSid,
+    });
     logger.logError(
       'error',
       callerPhone,
-      `Error processing incoming call: ${error instanceof Error ? error.message : 'Unknown error'}`
+      error instanceof Error ? error.message : 'Unknown error',
+      { callSid }
     );
     res.type('text/xml').send(twilioService.error());
   }
@@ -68,11 +78,22 @@ router.post('/conference-status', async (req: Request, res: Response) => {
     await CallHandler.handleConferenceStatus(event);
     res.status(200).send('OK');
   } catch (error) {
-    console.error('Error handling conference status:', error);
+    const participantPhone = req.body.Caller || 'unknown';
+    const participant = participantPhone !== 'unknown'
+      ? await participantRepository.findByPhone(normalizePhoneNumber(participantPhone)).catch(() => null)
+      : null;
+    reportError(error, {
+      phase: 'conference_status',
+      participantId: participant?.id,
+      participantPhone,
+      callSid: req.body.CallSid,
+      conferenceSid: req.body.ConferenceSid,
+    });
     logger.logError(
       'error',
-      req.body.Caller || 'unknown',
-      `Error processing conference status: ${error instanceof Error ? error.message : 'Unknown error'}`
+      participantPhone,
+      error instanceof Error ? error.message : 'Unknown error',
+      { callSid: req.body.CallSid, conferenceSid: req.body.ConferenceSid }
     );
     res.status(200).send('OK'); // Always return 200 to prevent Twilio retries
   }

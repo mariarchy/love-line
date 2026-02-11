@@ -6,6 +6,7 @@ import { conferenceRepository } from '../db/conference-repo';
 import { getTwilioService } from './twilio';
 import { normalizePhoneNumber } from '../utils/conference';
 import { generateConferenceRoomId } from '../utils/conference';
+import { reportError } from './error-reporter';
 
 /**
  * Handles call processing business logic
@@ -110,14 +111,24 @@ export class CallHandler {
     if (!participantPhone) return;
     
     const participant = await participantRepository.findByPhone(participantPhone);
-    // TODO: Error if participant not found
     if (participant === null) {
-      twilioService.error();
+      reportError(new Error('Participant not found on join'), {
+        phase: 'participant_join',
+        participantPhone,
+        callSid,
+        conferenceSid,
+      });
+      if (callSid) {
+        try {
+          await twilioService.playErrorAndHangup(callSid);
+        } catch (e) {
+          reportError(e, { phase: 'participant_join', callSid });
+        }
+      }
       return;
     }
     const match = await matchRepository.findByParticipantId(participant.id);
     if (!match) return;
-
 
     // Set conference to active if it doesn't exist
     const conferenceRecord = await conferenceRepository.findByConferenceSid(conferenceSid);
@@ -149,9 +160,20 @@ export class CallHandler {
     await twilioService.trackConferenceLeave(conferenceSid);
     
     const participant = await participantRepository.findByPhone(participantPhone);
-    // TODO: Error if participant not found
     if (participant === null) {
-      twilioService.error();
+      reportError(new Error('Participant not found on leave'), {
+        phase: 'participant_leave',
+        participantPhone,
+        callSid,
+        conferenceSid,
+      });
+      if (callSid) {
+        try {
+          await twilioService.playErrorAndHangup(callSid);
+        } catch (e) {
+          reportError(e, { phase: 'participant_leave', callSid });
+        }
+      }
       return;
     }
     const match = await matchRepository.findByParticipantId(participant.id);
@@ -226,7 +248,18 @@ export class CallHandler {
         });
       }
     } catch (error) {
-      console.error('Error handling participant leave:', error);
+      reportError(error, {
+        phase: 'notify_remaining',
+        conferenceSid,
+      });
+      try {
+        const participants = await getTwilioService().getClient().conferences(conferenceSid).participants.list();
+        if (participants.length === 1 && participants[0].callSid) {
+          await getTwilioService().playErrorAndHangup(participants[0].callSid);
+        }
+      } catch (_) {
+        // Best effort; already reported
+      }
     }
   }
 }

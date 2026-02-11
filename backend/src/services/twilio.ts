@@ -120,16 +120,29 @@ export class TwilioService {
   }
 
   /**
-   * Generate TwiML for system error
+   * Generate TwiML for system error (user-facing message + hangup)
    */
   error(): string {
     const twiml = new VoiceResponse();
     twiml.say(
       { voice: 'Google.en-US-Neural2-F' },
-      'We\'re experiencing technical difficulties. Please try again later. Goodbye.'
+      'We\'re sorry, we\'ve encountered an error. Please try again later. Goodbye.'
     );
     twiml.hangup();
     return twiml.toString();
+  }
+
+  /**
+   * Play error message to an active call and hang up (e.g. from conference-status webhook).
+   * Use when the error happens mid-call so the user hears the message instead of silence.
+   */
+  async playErrorAndHangup(callSid: string): Promise<void> {
+    try {
+      await this.client.calls(callSid).update({ twiml: this.error() });
+    } catch (err) {
+      console.error(`Failed to play error TwiML to call ${callSid}:`, err);
+      throw err;
+    }
   }
 
   /**

@@ -1,7 +1,19 @@
 import 'dotenv/config';
+
+const sentryDsn = process.env.SENTRY_DSN?.trim();
+if (sentryDsn) {
+  const Sentry = require('@sentry/node');
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: process.env.NODE_ENV,
+    tracesSampleRate: 0.1,
+  });
+}
+
 import express from 'express';
 import voiceRoutes from './routes/voice';
 import { ensureMigrations } from './db/connection';
+import { reportError } from './services/error-reporter';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,12 +60,9 @@ app.get('/', (req, res) => {
   });
 });
 
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  reportError(err, { phase: 'unknown', callSid: req.body?.CallSid, conferenceSid: req.body?.ConferenceSid, error: err });
+  res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
 // Start server (run migrations first)

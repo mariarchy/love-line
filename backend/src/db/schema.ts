@@ -33,7 +33,7 @@ export interface ConferencesTable {
   id: Generated<number>;
   matchId: number;
   conferenceId: string;
-  conferenceSid: string;
+  conferenceSid: string | null; // set asynchronously via setConferenceSid()
   status: ConferenceStatus;
   startedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;
   endedAt: ColumnType<Date | null, Date | string | null, Date | string | null>;

@@ -6,3 +6,4 @@ dist/
 logs/*.log
 !logs/.gitkeep
 data/*
+.pnpm-store/

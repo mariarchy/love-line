@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
-import { db } from './connection';
+import { db, ensureMigrations } from './connection';
 import { normalizePhoneNumber } from '../utils/conference';
 
 interface SeedParticipant {
@@ -32,7 +32,8 @@ async function loadSeedData(): Promise<SeedParticipant[]> {
 }
 
 export async function seed() {
-  // Skip if DB already has participants (e.g. persisted volume on redeploy)
+  await ensureMigrations();
+  // Skip if DB already has participants (e.g. redeploy)
   const existing = await db.selectFrom('participants').select('id').limit(1).executeTakeFirst();
   if (existing) {
     console.log('Database already seeded, skipping.');

@@ -1,15 +1,13 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import voiceRoutes from './routes/voice';
-
-// Load environment variables
-dotenv.config();
+import { ensureMigrations } from './db/connection';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Validate required environment variables
-const requiredEnvVars = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'];
+const requiredEnvVars = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'DATABASE_URL'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
@@ -58,12 +56,19 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   });
 });
 
-// Start server
+// Start server (run migrations first)
 const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || `http://localhost:${PORT}`;
-app.listen(PORT, () => {
-  console.log(`♡ ✿ Love Line Backend ✿ ♡`);
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Webhook Base URL: ${webhookBaseUrl}`);
-  console.log(`\nConfigure your Twilio phone number webhook to: ${webhookBaseUrl}/voice/incoming`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+ensureMigrations()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`♡ ✿ Love Line Backend ✿ ♡`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Webhook Base URL: ${webhookBaseUrl}`);
+      console.log(`\nConfigure your Twilio phone number webhook to: ${webhookBaseUrl}/voice/incoming`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to run migrations:', err);
+    process.exit(1);
+  });

@@ -1,0 +1,17 @@
+# Optional: used by `pnpm run db:ensure` / `pnpm run dev` to start Postgres when not running.
+# Set DATABASE_URL in .env to match (e.g. postgresql://loveline:YOUR_PASSWORD@localhost:5432/loveline).
+# You can override user/password with env vars: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB.
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-loveline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loveline}
+      POSTGRES_DB: ${POSTGRES_DB:-loveline}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_dev_data: {}

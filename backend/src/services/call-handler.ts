@@ -37,12 +37,8 @@ export class CallHandler {
       return twilioService.unknownNumber();
     }
 
-    // Log call start
-    const match = participant.matchParticipantId
-      ? await matchRepository.findByParticipantId(participant.id)
-      : null;
+    const match = await matchRepository.findByParticipantId(participant.id)
     if (!match) {
-      // Handle error
       reportError(new Error('Match not found'), { phase: 'incoming', callSid: callData.callSid });
       const logger = new Logger();
       logger.logError(
@@ -53,6 +49,7 @@ export class CallHandler {
       );
       return twilioService.error();
     }
+
     const matchParticipant = await participantRepository.findByIdBang(match.matchParticipantId);
     const callDetails = {
       name: participant.name,
@@ -62,7 +59,6 @@ export class CallHandler {
         phoneNumber: matchParticipant.phone,
       }
     };
-    // Bug: 
     const conferenceRoomId = generateConferenceRoomId(callDetails);
 
     await callLogRepository.logEvent({

@@ -153,7 +153,7 @@ export class TwilioService {
 
     // Cross-process check via DB
     const participant = await participantRepository.findByPhone(normalized);
-    if (!participant || !participant.matchParticipantId) return false;
+    if (!participant) return false;
 
     const match = await matchRepository.findByParticipantId(participant.id);
     if (!match) return false;

@@ -5,24 +5,12 @@ import { normalizePhoneNumber } from '../utils/conference';
 
 export type ParticipantRow = Selectable<ParticipantsTable>;
 
-export interface ParticipantWithMatch extends ParticipantRow {
-  matchParticipantId: number | null;
-  scheduledAt: Date | null;
-}
-
 export class ParticipantRepository {
-  async findByPhone(phone: string): Promise<ParticipantWithMatch | null> {
+  async findByPhone(phone: string): Promise<ParticipantRow | null> {
     const normalized = normalizePhoneNumber(phone);
     const row = await db
       .selectFrom('participants')
-      .leftJoin('matches', 'matches.participantId', 'participants.id')
-      .select([
-        'participants.id as id',
-        'participants.name as name',
-        'participants.phone as phone',
-        'matches.matchParticipantId as matchParticipantId',
-        'matches.scheduledAt as scheduledAt'
-      ])
+      .selectAll()
       .where('participants.phone', '=', normalized)
       .executeTakeFirst();
 

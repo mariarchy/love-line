@@ -55,9 +55,6 @@ export class CallHandler {
     // Bug: 
     const conferenceRoomId = generateConferenceRoomId(callDetails);
 
-    // Track call for conference events
-    await twilioService.trackConferenceJoin(conferenceRoomId, match.id);
-
     await callLogRepository.logEvent({
       matchId: match.id,
       status: 'started',
@@ -121,14 +118,18 @@ export class CallHandler {
     const match = await matchRepository.findByParticipantId(participant.id);
     if (!match) return;
 
+
+    // Set conference to active if it doesn't exist
     const conferenceRecord = await conferenceRepository.findByConferenceSid(conferenceSid);
-    const resolvedConferenceId = conferenceRecord?.conferenceId || conferenceId || null;
+    if (!conferenceRecord || conferenceRecord.status !== 'active') {
+      await twilioService.trackConferenceJoin(conferenceId, match.id, conferenceSid);
+    }
 
     await callLogRepository.logEvent({
       matchId: match.id,
       status: 'participant_joined',
       participantId: participant.id,
-      conferenceId: resolvedConferenceId,
+      conferenceId,
       conferenceSid,
       callSid,
       startedAt: new Date().toISOString(),

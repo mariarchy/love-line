@@ -152,10 +152,8 @@ export class TwilioService {
   /**
    * Track participant joining a conference
    */
-  async trackConferenceJoin(conferenceId: string, matchId?: number, conferenceSid: string | null = null): Promise<void> {
-    if (matchId) {
-      await conferenceRepository.upsertActive(matchId, conferenceId, conferenceSid);
-    }
+  async trackConferenceJoin(conferenceId: string, matchId: number, conferenceSid: string): Promise<void> {
+    await conferenceRepository.upsertActive(matchId, conferenceId, conferenceSid);
   }
 
   /**

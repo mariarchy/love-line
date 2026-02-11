@@ -10,16 +10,16 @@
     "type-check": "tsc --noEmit",
     "validate": "ts-node src/utils/validate-participants.ts",
     "db:seed": "ts-node src/db/seed.ts",
-    "db:reset": "rm -f data/participants.db && npm run db:seed"
+    "db:reset": "rm -f data/participants.db data/participants.db-wal data/participants.db-shm && npm run db:seed"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^9.4.3",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "kysely": "^0.27.3",
-    "twilio": "^4.19.0"
+    "better-sqlite3": "^12.6.2",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "kysely": "^0.28.11",
+    "twilio": "^5.12.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

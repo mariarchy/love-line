@@ -5,7 +5,7 @@ Get your Love Line backend running in 5 minutes!
 ## Step 1: Install Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## Step 2: Configure Environment

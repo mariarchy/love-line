@@ -44,6 +44,15 @@
   vertical-align: middle;
 }
 
+.letter-link {
+  text-align: center;
+  margin-top: clamp(24px, 4vh, 40px);
+}
+
+.letter-link a {
+  color: var(--bg);
+}
+
 /* Letter groups: horizontal row of segments (stack on mobile) */
 .letter__group {
   display: flex;

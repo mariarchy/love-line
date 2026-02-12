@@ -1,4 +1,9 @@
-/* Letter page — same background via styles.css; layout only */
+/* Letter page — inverted palette: cream background, dark text */
+
+.letter-page {
+  background: var(--text);
+  color: var(--bg);
+}
 
 .letter-page .page {
   justify-content: flex-start;
@@ -39,10 +44,40 @@
   vertical-align: middle;
 }
 
+/* Letter groups: horizontal row of segments (stack on mobile) */
+.letter__group {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 3vh, 28px);
+  width: 100%;
+}
+
+.letter__group .letter__segment {
+  width: 100%;
+}
+
 /* Mobile: single column, all segments full width (default above) */
 
-/* Desktop: blocking — left/right alignment and centered group */
+/* Desktop: blocking — left/right alignment and horizontal groups */
 @media (min-width: 621px) {
+  .letter__group {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: clamp(12px, 2vw, 24px);
+  }
+
+  .letter__group .letter__segment {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .letter__group .letter__img {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .letter__segment--left .letter__img {
     margin-right: auto;
     margin-left: 0;

@@ -44,6 +44,11 @@
   vertical-align: middle;
 }
 
+.letter__group {
+  margin-bottom: clamp(16px, 3vh, 28px);
+  width: 100%;
+}
+
 .letter-link {
   text-align: center;
   margin-top: clamp(24px, 4vh, 40px);
@@ -54,37 +59,50 @@
 }
 
 /* Letter groups: horizontal row of segments (stack on mobile) */
-.letter__group {
+.letter__row {
   display: flex;
   flex-direction: column;
   gap: clamp(16px, 3vh, 28px);
   width: 100%;
 }
 
-.letter__group .letter__segment {
+.letter__row .letter__segment {
   width: 100%;
+}
+
+/* Mobile: these three segments at 80% width (reset in desktop block below) */
+.letter__row.letter__row--scale-80-mobile .letter__segment .letter__img {
+  width: 80%;
+  max-width: 80%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Mobile: single column, all segments full width (default above) */
 
 /* Desktop: blocking — left/right alignment and horizontal groups */
 @media (min-width: 621px) {
-  .letter__group {
+  .letter__row {
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: flex-start;
     gap: clamp(12px, 2vw, 24px);
   }
 
-  .letter__group .letter__segment {
+  .letter__row .letter__segment {
     width: auto;
     flex: 1 1 0;
     min-width: 0;
   }
 
-  .letter__group .letter__img {
+  .letter__row .letter__img {
     width: 100%;
     max-width: 100%;
+  }
+
+  /* Reset 80% scaling so this row uses normal desktop sizing (max-width from left/center/right rules) */
+  .letter__row.letter__row--scale-80-mobile .letter__segment .letter__img {
+    width: 100%;
   }
 
   .letter__segment--left .letter__img {
@@ -99,13 +117,31 @@
     max-width: min(420px, 85%);
   }
 
+  /* Desktop: scale-130 for left/right (420px → 546px, 85% → 110.5%) */
+  .letter__segment--scale-130.letter__segment--left .letter__img {
+    max-width: min(546px, 110%);
+  }
+
+  .letter__segment--scale-130.letter__segment--right .letter__img {
+    max-width: min(546px, 110%);
+  }
+
   .letter__segment:not(.letter__segment--left):not(.letter__segment--right) .letter__img {
     margin-left: auto;
     margin-right: auto;
     max-width: min(520px, 90%);
   }
 
-  .letter__group--center {
+
+  /* Desktop: scale-140 image at 140% of default max (520px → 728px, 90% → 126%) */
+  .letter__segment--scale-140:not(.letter__segment--left):not(.letter__segment--right) .letter__img {
+    max-width: min(728px, 126%);
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .letter__row--center {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -113,12 +149,12 @@
     width: 100%;
   }
 
-  .letter__group--center .letter__segment {
+  .letter__row--center .letter__segment {
     width: auto;
     flex: 0 1 auto;
   }
 
-  .letter__group--center .letter__img {
+  .letter__row--center .letter__img {
     max-width: min(280px, 30vw);
     margin-left: 0;
     margin-right: 0;

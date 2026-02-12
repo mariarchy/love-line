@@ -1,0 +1,82 @@
+/* Letter page — same background via styles.css; layout only */
+
+.letter-page .page {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.letter__header {
+  margin-bottom: clamp(16px, 3vh, 32px);
+  text-align: center;
+}
+
+.letter__title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-style: italic;
+}
+
+.letter__body {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 3vh, 28px);
+  width: 100%;
+}
+
+.letter__segment {
+  margin: 0;
+  width: 100%;
+}
+
+.letter__img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border: 0;
+  vertical-align: middle;
+}
+
+/* Mobile: single column, all segments full width (default above) */
+
+/* Desktop: blocking — left/right alignment and centered group */
+@media (min-width: 621px) {
+  .letter__segment--left .letter__img {
+    margin-right: auto;
+    margin-left: 0;
+    max-width: min(420px, 85%);
+  }
+
+  .letter__segment--right .letter__img {
+    margin-left: auto;
+    margin-right: 0;
+    max-width: min(420px, 85%);
+  }
+
+  .letter__segment:not(.letter__segment--left):not(.letter__segment--right) .letter__img {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: min(520px, 90%);
+  }
+
+  .letter__group--center {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: clamp(12px, 2vw, 24px);
+    width: 100%;
+  }
+
+  .letter__group--center .letter__segment {
+    width: auto;
+    flex: 0 1 auto;
+  }
+
+  .letter__group--center .letter__img {
+    max-width: min(280px, 30vw);
+    margin-left: 0;
+    margin-right: 0;
+  }
+}

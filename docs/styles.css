@@ -51,6 +51,23 @@ body {
   flex-shrink: 0;
 }
 
+.letter-link {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.letter-link a {
+  color: var(--text);
+  text-decoration: none;
+  font-style: italic;
+  font-size: 1.1em;
+  letter-spacing: 0.05em;
+}
+
+.letter-link a:hover {
+  text-decoration: underline;
+}
+
 .media {
   margin: 0;
 }

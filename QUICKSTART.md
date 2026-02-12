@@ -5,7 +5,6 @@ Get your Love Line backend running in 5 minutes!
 ## Step 1: Install Dependencies
 
 ```bash
-cd backend
 npm install
 ```
 

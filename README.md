@@ -28,7 +28,6 @@ A Twilio-based phone matching service that connects pre-matched pairs of partici
 
 1. Install dependencies:
 ```bash
-cd backend
 npm install
 ```
 

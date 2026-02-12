@@ -3,20 +3,18 @@
 ## Project Structure
 
 ```
-backend/
 ├── src/
 │   ├── index.ts                 # Express server entry point
 │   ├── routes/
 │   │   └── voice.ts            # Twilio webhook routes
 │   ├── services/
-│   │   ├── database.ts         # Participant data management
+│   │   ├── call-handler.ts     # Incoming call handling
 │   │   ├── logger.ts           # Call event logging
 │   │   └── twilio.ts           # Twilio API integration
 │   ├── types/
 │   │   └── index.ts            # TypeScript type definitions
 │   └── utils/
-│       ├── conference.ts        # Conference room ID generation
-│       └── validate-participants.ts  # Data validation utility
+│       └── conference.ts        # Conference room ID generation
 ├── data/
 │   ├── participants.json       # Participant database (gitignored)
 │   └── participants.example.json  # Example data structure

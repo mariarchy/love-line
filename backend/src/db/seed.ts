@@ -47,7 +47,16 @@ export async function seed() {
 
     for (const p of participants) {
       const phone = normalizePhoneNumber(p.phoneNumber);
-      const match = { name: p.match.name, phone: p.match.phoneNumber }
+      const matchPhone =
+        p.match.phoneNumber != null && String(p.match.phoneNumber).trim() !== ''
+          ? normalizePhoneNumber(p.match.phoneNumber)
+          : null;
+      if (matchPhone == null) {
+        throw new Error(
+          `Missing or empty phoneNumber for ${p.name}'s match "${p.match.name}" with phone number ${p.match.phoneNumber}.`
+        );
+      }
+      const match = { name: p.match.name, phone: matchPhone };
       const inserted = await trx
         .insertInto('participants')
         .values([{ name: p.name, phone }, match])

@@ -21,7 +21,6 @@ export class TwilioService {
   constructor(
     accountSid: string,
     authToken: string,
-    private maxWaitTimeMinutes: number = 20,
     webhookBaseUrl: string,
   ) {
     this.client = twilio(accountSid, authToken);
@@ -36,10 +35,7 @@ export class TwilioService {
     const conferenceRoomId = generateConferenceRoomId(participant);
     const baseUrl = webhookBaseUrl || this.webhookBaseUrl;
     
-    twiml.say(
-      { voice: 'Google.en-US-Neural2-F' },
-      `Hi ${participant.name}, welcome to your Valentine's Day match call. We're connecting you with your match now. Please wait while they join.`
-    );
+    twiml.play({}, `${baseUrl}/voice/welcome-audio`);
 
     const dial = twiml.dial();
     dial.conference({
@@ -74,7 +70,7 @@ export class TwilioService {
    */
   waitMusic(): string {
     const twiml = new VoiceResponse();
-    twiml.play({ loop: 0 }, 'http://com.twilio.sounds.music.s3.amazonaws.com/ClockworkWaltz.mp3');
+    twiml.play({ loop: 0 }, `${this.webhookBaseUrl}/voice/wait-music-audio`);
     return twiml.toString();
   }
 
@@ -211,7 +207,6 @@ export function getTwilioService(): TwilioService {
   if (!twilioServiceInstance) {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const maxWaitTime = parseInt(process.env.MAX_WAIT_TIME_MINUTES || '20', 10);
     const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || 'http://localhost:3000';
 
     if (!accountSid || !authToken) {
@@ -221,7 +216,6 @@ export function getTwilioService(): TwilioService {
     twilioServiceInstance = new TwilioService(
       accountSid,
       authToken,
-      maxWaitTime,
       webhookBaseUrl
     );
   }

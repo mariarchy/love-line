@@ -1,3 +1,4 @@
+import path from 'path';
 import express, { Request, Response, Router } from 'express';
 import { TwilioIncomingCall, ConferenceStatusEvent } from '../types';
 import { CallHandler } from '../services/call-handler';
@@ -8,6 +9,8 @@ import { reportError } from '../services/error-reporter';
 import { participantRepository } from '../db/participant-repo';
 
 const router: Router = express.Router();
+const welcomeAudioPath = path.join(process.cwd(), 'hotline-welcome.mp3');
+const waitMusicAudioPath = path.join(process.cwd(), 'romantic-jazz-waiting.mp3');
 
 /**
  * POST /voice/incoming
@@ -44,6 +47,32 @@ router.post('/incoming', async (req: Request, res: Response) => {
     );
     res.type('text/xml').send(twilioService.error());
   }
+});
+
+/**
+ * GET /voice/welcome-audio
+ * Serves the welcome message audio for incoming calls (Twilio fetches this URL).
+ */
+router.get('/welcome-audio', (_req: Request, res: Response) => {
+  res.type('audio/mpeg').sendFile(welcomeAudioPath, (err) => {
+    if (err) {
+      console.error('Failed to send welcome audio:', err);
+      res.status(500).end();
+    }
+  });
+});
+
+/**
+ * GET /voice/wait-music-audio
+ * Serves hold music while the caller waits for their match
+ */
+router.get('/wait-music-audio', (_req: Request, res: Response) => {
+  res.type('audio/mpeg').sendFile(waitMusicAudioPath, (err) => {
+    if (err) {
+      console.error('Failed to send wait music audio:', err);
+      res.status(500).end();
+    }
+  });
 });
 
 /**
